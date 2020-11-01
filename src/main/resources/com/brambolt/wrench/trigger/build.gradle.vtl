@@ -1,0 +1,66 @@
+buildscript {
+  repositories {
+    mavenLocal()
+    maven {
+      url '${mavenContextUrl}/${mavenRepoKey}'
+      credentials {
+        username mavenUser
+        password mavenToken
+      }
+    }
+    jcenter()
+    mavenCentral()
+    maven { url 'https://plugins.gradle.org/m2' }
+  }
+  dependencies {
+    classpath 'com.brambolt.wrench:brambolt-wrench-triggers:${version}'
+  }
+}
+
+repositories {
+  mavenLocal()
+  maven {
+    url '${mavenContextUrl}/${mavenRepoKey}'
+    credentials {
+      username mavenUser
+      password mavenToken
+    }
+  }
+  jcenter()
+  mavenCentral()
+  maven { url 'https://plugins.gradle.org/m2' }
+}
+
+apply plugin: 'com.brambolt.wrench.trigger'
+
+trigger {
+  baseDirectory '${baseDirectory}'
+  artifactory {
+    contextUrl = '${mavenContextUrl}'
+    repoKey = '${mavenRepoKey}'
+    apiKey = project.hasProperty('artifactoryApiKey') ? project.artifactoryApiKey : null
+  }
+  release {
+    artifact {
+      artifactGroup = '${releaseGroupId}'
+      artifactId = '${releaseArtifactId}'
+    }
+  }
+  staging {
+    artifact {
+      artifactGroup = '${stagingGroupId}'
+      artifactId = '${stagingArtifactId}'
+      artifactType = '${stagingArtifactType}'
+      artifactPackaging = '${stagingArtifactPackaging}'
+    }
+    executables = [ unix: 'gradlew', windows: 'gradlew.bat' ]
+    args = [ '${stagingTaskArg}' ]
+    env = [ JAVA_HOME: System.getProperty('java.home') ]
+  }
+  versions {
+    history {
+      size = ${versionHistorySize}
+    }
+  }
+}
+

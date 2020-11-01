@@ -1,0 +1,86 @@
+
+buildscript {
+  repositories {
+    mavenLocal()
+    maven {
+      url "${mavenContextUrl}/${mavenRepoKey}"
+      credentials {
+        username mavenUser
+        password mavenToken
+      }
+    }
+    maven { url 'https://plugins.gradle.org/m2' }
+    mavenCentral()
+    jcenter()
+  }
+  dependencies {
+    classpath "${clientGroup}:${clientName}-properties:${version}"
+    classpath "com.brambolt:brambolt-rt:${bramboltVersion}"
+    classpath "com.brambolt.calypso:brambolt-calypso-helpdesk-wrench-steps:${bramboltVersion}"
+    classpath "com.brambolt.calypso:brambolt-calypso-wrench-steps:${bramboltVersion}"
+  }
+}
+
+plugins {
+  id "com.dorongold.task-tree" version "1.5"
+  id 'maven-publish'
+  id 'com.jfrog.artifactory' version '4.9.9'
+}
+
+repositories {
+  mavenLocal()
+  maven {
+    url "${project.mavenContextUrl}/${project.mavenRepoKey}"
+    credentials {
+      username project.mavenUser
+      password project.mavenToken
+    }
+  }
+  mavenCentral()
+  jcenter()
+}
+
+publishing {}
+
+artifactory {
+  contextUrl = mavenContextUrl
+  publish {
+    repository {
+      repoKey = mavenRepoKey
+      username = mavenUser
+      password = mavenToken
+      maven = true
+    }
+    defaults {
+      publications('mavenJava')
+      publishArtifacts = true
+      publishPom = true
+    }
+  }
+  resolve {
+    repository {
+      repoKey = mavenRepoKey
+      username = mavenUser
+      password = mavenToken
+      maven = true
+    }
+  }
+}
+
+import com.brambolt.wrench.Target
+import com.brambolt.wrench.Wrenches
+
+ext {
+  wrench = (Wrenches.find(project)
+    .withTarget(Target.create(project))
+    .withContext(context: 'wrench')
+    .bind([
+      hostName: (project.hasProperty('wrenchHostName')
+        ? project.wrenchHostName : '@hostName@'),
+      environmentName: (project.hasProperty('wrenchEnvironmentName')
+        ? project.wrenchEnvironmentName : '@environmentName@')
+    ]))
+}
+
+project.wrench.apply()
+

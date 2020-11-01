@@ -1,0 +1,11 @@
+**/*.iml
+**/*.swo
+**/*.swp
+**/.vagrant
+**/build
+**/out
+**/*-bkup
+.gradle
+.idea/libraries/
+.idea/tasks.xml
+.idea/workspace.xml

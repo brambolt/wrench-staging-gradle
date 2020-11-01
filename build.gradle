@@ -1,0 +1,90 @@
+/*
+ * Copyright 2017-2020 Brambolt ehf.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ * http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+plugins {
+  id 'com.brambolt.gradle.build.plugin' apply false
+  id 'com.brambolt.gradle.testkit' apply false
+}
+
+description = 'Wrench staging.'
+group = 'com.brambolt.wrench'
+
+ext {
+  artifactId = 'brambolt-wrench-staging-gradle'
+  developers = [[
+    email: 'stefan.sigurdsson@brambolt.com',
+    id: 'stefan.sigurdsson@brambolt.com',
+    name: 'Stefán Sigurðsson'
+  ]]
+  inceptionYear = '2018'
+  isGitHosted = true
+  isOpenSource = false // Enables publishing to plugins.gradle.org and Bintray
+  licenses = [[
+    id: 'Apache-2.0',
+    name: 'The Apache Software License, Version 2.0',
+    url: 'http://www.apache.org/licenses/LICENSE-2.0.txt'
+  ]]
+  pluginClass = 'com.brambolt.wrench.StagingPlugin'
+  pluginDisplayName = 'Brambolt Staging plugin'
+  pluginId = 'com.brambolt.wrench.staging'
+  pluginTags = ['wrench', 'staging']
+  pluginWebsite = 'https://github.com/brambolt/wrenches'
+  release = bramboltRelease
+  vcsUrl = 'https://github.com/brambolt/wrenches'
+}
+
+apply plugin: 'com.brambolt.gradle.build.plugin'
+
+dependencies {
+  implementation "com.brambolt:brambolt-rt:${bramboltVersion}"
+  implementation 'com.github.jengelman.gradle.plugins:shadow:6.0.0'
+  // implementation "com.brambolt.gradle:brambolt-build-plugins:${version}"
+  implementation "com.brambolt.gradle:brambolt-gradle-rt:${version}"
+  implementation "com.brambolt.gradle:brambolt-gradle-util:${version}"
+  implementation "com.brambolt.gradle:brambolt-gradle-staging:${version}"
+  implementation "com.brambolt.gradle:brambolt-gradle-velocity:${version}"
+  implementation "com.brambolt.wrench:brambolt-wrench-runbooks-gradle:${version}"
+  testImplementation "com.brambolt.gradle:brambolt-gradle-testkit:${version}"
+}
+
+apply plugin: 'com.jfrog.artifactory'
+
+artifactory {
+  contextUrl = project.artifactoryContextUrl
+  publish {
+    repository {
+      repoKey = project.artifactoryRepoKey
+      username = project.artifactoryUser
+      password = project.artifactoryToken
+      maven = true
+    }
+    defaults {
+      publications(project.publishing.publications.names.toArray())
+      publishArtifacts = true
+      publishPom = true
+    }
+  }
+  resolve {
+    repository {
+      repoKey = project.artifactoryRepoKey
+      username = project.artifactoryUser
+      password = project.artifactoryToken
+      maven = true
+    }
+  }
+}
+
+all.dependsOn(artifactoryPublish)

@@ -23,7 +23,7 @@ description = 'Wrench staging.'
 group = 'com.brambolt.wrench'
 
 ext {
-  artifactId = 'brambolt-wrench-staging-gradle'
+  artifactId = 'brambolt-wrench-staging'
   developers = [[
     email: 'stefan.sigurdsson@brambolt.com',
     id: 'stefan.sigurdsson@brambolt.com',
@@ -56,7 +56,7 @@ dependencies {
   implementation "com.brambolt.gradle:brambolt-gradle-util:${version}"
   implementation "com.brambolt.gradle:brambolt-gradle-staging:${version}"
   implementation "com.brambolt.gradle:brambolt-gradle-velocity:${version}"
-  implementation "com.brambolt.wrench:brambolt-wrench-runbooks-gradle:${version}"
+  implementation "com.brambolt.wrench:brambolt-wrench-runbooks:${version}"
   testImplementation "com.brambolt.gradle:brambolt-gradle-testkit:${version}"
 }
 

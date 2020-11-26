@@ -50,14 +50,13 @@ apply plugin: 'com.brambolt.gradle.build.plugin'
 
 dependencies {
   implementation "com.brambolt:brambolt-rt:${bramboltVersion}"
-  implementation 'com.github.jengelman.gradle.plugins:shadow:6.0.0'
-  // implementation "com.brambolt.gradle:brambolt-build-plugins:${version}"
   implementation "com.brambolt.gradle:brambolt-gradle-rt:${version}"
   implementation "com.brambolt.gradle:brambolt-gradle-util:${version}"
   implementation "com.brambolt.gradle:brambolt-gradle-staging:${version}"
   implementation "com.brambolt.gradle:brambolt-gradle-velocity:${version}"
   implementation "com.brambolt.wrench:brambolt-wrench-runbooks:${version}"
   implementation "com.brambolt.wrench:brambolt-wrench-steps:${version}"
+  implementation 'com.github.jengelman.gradle.plugins:shadow:6.0.0'
   testImplementation "com.brambolt.gradle:brambolt-gradle-testkit:${version}"
 }
 

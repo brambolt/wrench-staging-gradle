@@ -31,7 +31,7 @@ ext {
   ]]
   inceptionYear = '2018'
   isGitHosted = true
-  isOpenSource = false // Enables publishing to plugins.gradle.org and Bintray
+  isOpenSource = true // Enables publishing to plugins.gradle.org and Bintray
   licenses = [[
     id: 'Apache-2.0',
     name: 'The Apache Software License, Version 2.0',
@@ -51,14 +51,16 @@ apply plugin: 'com.brambolt.gradle.build.plugin'
 dependencies {
   implementation "com.brambolt:brambolt-rt:${bramboltVersion}"
   implementation "com.brambolt.gradle:brambolt-gradle-rt:${version}"
-  implementation "com.brambolt.gradle:brambolt-gradle-util:${version}"
   implementation "com.brambolt.gradle:brambolt-gradle-staging:${version}"
+  implementation "com.brambolt.gradle:brambolt-gradle-util:${version}"
   implementation "com.brambolt.gradle:brambolt-gradle-velocity:${version}"
+  implementation "com.brambolt.wrench:brambolt-wrench-properties:${version}"
   implementation "com.brambolt.wrench:brambolt-wrench-runbooks:${version}"
   implementation "com.brambolt.wrench:brambolt-wrench-steps:${version}"
-  implementation 'com.github.jengelman.gradle.plugins:shadow:6.0.0'
   testImplementation "com.brambolt.gradle:brambolt-gradle-testkit:${version}"
 }
+
+test.finalizedBy(':samples:runAll')
 
 apply plugin: 'com.jfrog.artifactory'
 

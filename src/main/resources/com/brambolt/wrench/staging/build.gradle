@@ -14,7 +14,7 @@ buildscript {
     jcenter()
   }
   dependencies {
-    classpath "${clientGroup}:${clientName}-properties:${version}"
+    classpath "${wrenchPropertiesGroup}:${wrenchPropertiesArtifactId}:${version}"
     classpath "com.brambolt:brambolt-rt:${bramboltVersion}"
     classpath "com.brambolt.calypso:brambolt-calypso-helpdesk-wrench-steps:${bramboltVersion}"
     classpath "com.brambolt.calypso:brambolt-calypso-wrench-steps:${bramboltVersion}"

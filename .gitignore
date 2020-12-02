@@ -9,3 +9,7 @@
 .idea/libraries/
 .idea/tasks.xml
 .idea/workspace.xml
+/samples/*/gradle/wrapper/gradle-wrapper.jar
+/samples/*/gradle/wrapper/gradle-wrapper.properties
+/samples/*/gradlew
+/samples/*/gradlew.bat

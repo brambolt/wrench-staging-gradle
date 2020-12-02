@@ -1,0 +1,40 @@
+
+system {
+  [id: 'some.example.system']
+}
+
+host hostName
+
+environment environmentName
+
+checkpoint c1 {
+  steps {
+    s1(type: DefaultTask) {
+      doFirst {
+        project.logger.quiet("Step 1...")
+      }
+    }
+    s2(type: DefaultTask) {
+      doFirst {
+        project.logger.quiet("Step 2...")
+      }
+    }
+  }
+}
+
+checkpoint c2 {
+  steps {
+    s3(type: DefaultTask) {
+      doFirst {
+        project.logger.quiet("Step 3...")
+      }
+    }
+  }
+}
+
+runbook r {
+  checkpoints {
+    c1
+    c2
+  }
+}

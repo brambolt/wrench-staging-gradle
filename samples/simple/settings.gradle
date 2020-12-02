@@ -1,0 +1,23 @@
+
+pluginManagement {
+  repositories {
+    mavenLocal()
+    if (rootProject.hasProperty('mavenContextUrl'))
+      maven {
+        url "${mavenContextUrl}/${mavenRepoKey}"
+        credentials {
+          username(mavenUser as String)
+          password(mavenToken as String)
+        }
+      }
+    gradlePluginPortal()
+    maven { url 'https://dl.bintray.com/brambolt/public' }
+    jcenter()
+    mavenCentral()
+  }
+  plugins {
+    id 'com.brambolt.wrench.staging' version bramboltVersion
+  }
+}
+
+rootProject.name = 'sample'

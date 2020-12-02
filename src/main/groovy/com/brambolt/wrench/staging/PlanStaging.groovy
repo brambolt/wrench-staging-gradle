@@ -3,7 +3,9 @@ package com.brambolt.wrench.staging
 import com.brambolt.gradle.staging.tasks.Stage
 import com.brambolt.gradle.text.Strings
 import com.brambolt.gradle.velocity.tasks.Velocity
+import com.brambolt.util.Maps
 import com.brambolt.util.Resources
+import com.brambolt.wrench.InstanceProperties
 import com.brambolt.wrench.StagingPlugin
 import com.brambolt.wrench.Target
 import com.brambolt.wrench.Wrenches
@@ -16,6 +18,8 @@ import org.gradle.api.Project
 import org.gradle.api.Task
 import org.gradle.api.publish.maven.MavenPublication
 import org.gradle.api.tasks.Copy
+
+import static com.brambolt.gradle.util.Platforms.isWindows
 
 /**
  * Configures a wrench project.
@@ -117,14 +121,50 @@ class PlanStaging {
   }
 
   /**
-   * Configures the staging extension; not yet configurable; hardcoded.
+   * Configures the staging extension with targets.
    * @param project The project being configured
    */
   void configureStagingExtension(Project project) {
-    // We need to read these values from properties - hardcoded for now:
-    project.extensions.staging.targets(
-      brambolt: [name: 'brambolt', hostName: 'brambolt', environmentName: getEnvironmentName(project, 'dev')],
-      docker: [name: 'docker', hostName: 'docker', environmentName: getEnvironmentName(project, 'tmp')])
+    // We need to partially parse the wrench here, and extract enough data to
+    // allow retrieving the target definitions from the properties; this is
+    // pending, and in the meanwhile we can attempt to use explicitly set
+    // project properties (wrench*):
+    if (project.hasProperty('wrenchSystemId')) {
+      InstanceProperties instanceProperties = InstanceProperties.getFor(
+        project.wrenchApplicationPath,
+        project.wrenchInstancePath,
+        project.wrenchSystemId,
+        project.projectDir)
+      Map<String, Map> targets = [:]
+      String systemId = project.wrenchSystemId
+      List<String> segments = (systemId.contains('.')
+        ? systemId.split('\\.').toList() : [systemId])
+      Map nested = Maps.convert(instanceProperties)
+      for (String segment: segments)
+        nested = nested[segment]
+      if (null == nested.targets)
+        throw new GradleException("No targets defined for ${project.wrenchSystemId}")
+      nested.targets.listing.split(',').each { String it ->
+        String name = it.trim()
+        targets[name] = [
+          name: name,
+          environment: [name: nested.targets[name].environment.name],
+          host: [name: nested.targets[name].host.name]
+        ]
+      }
+      project.extensions.staging.targets(targets)
+    } else {
+      // Or, we guess blindly...
+      project.extensions.staging.targets(
+        brambolt: [
+          name: 'brambolt',
+          host: [name: 'brambolt'],
+          environment: [name: getEnvironmentName(project, 'dev')]],
+        docker: [
+          name: 'docker',
+          host: [name: 'docker'],
+          environment: [name: getEnvironmentName(project, 'tmp')]])
+    }
   }
 
   String getEnvironmentName(Project project, String suffix) {
@@ -326,7 +366,11 @@ class PlanStaging {
     File destinationFile = new File(destinationDir, baseName)
     if (!destinationDir.exists())
       destinationDir.mkdirs()
-    File outputFile = Resources.createFileFromResource(resourcePath, destinationFile, target)
+    Map<String, String> bindings = [
+      environmentName: target.environment.name as String,
+      hostName: target.host.name as String
+    ]
+    File outputFile = Resources.createFileFromResource(resourcePath, destinationFile, bindings)
     project.logger.info("Copied ${resourcePath} from class path to file system at ${destinationFile}")
     if (null == outputFile || !outputFile.exists())
       throw new GradleException("Unable to write ${resourcePath} to ${destinationFile}: ${outputFile}")
@@ -373,16 +417,27 @@ class PlanStaging {
   }
 
   void configureBuild(Project project) {
+    if (!project.hasProperty('wrenches'))
+      project.ext.wrenches = [classifier: 'local']
     Map wrenches = project.wrenches
-    Map<String, Object> wrench = [:]
+    if (!project.hasProperty('wrench'))
+      project.ext.wrench = [:]
+    Map<String, Object> wrench = project.wrench
     wrench.target = [:]
     project.ext.wrench = wrench
     wrench.target.dir = (project.hasProperty('wrenchDir')
-      ? project.wrenchDir : new File(project.buildDir, 'staging'))
+      ? project.wrenchDir
+      : new File(project.buildDir, 'staging'))
     wrench.target.environment = [:]
-    wrench.target.environment.name = getEnvironmentName(project, 'dev')
+    wrench.target.environment.name = (project.hasProperty('wrenchEnvironmentName')
+      ? project.wrenchEnvironmentName
+      : getEnvironmentName(project, 'dev'))
     wrench.target.staging = [:]
     wrench.target.staging.dir = new File(wrench.target.dir as File, '.wrench')
+    wrench.target.host = [:]
+    wrench.target.host.name = (project.hasProperty('wrenchHostName')
+      ? project.wrenchHostName
+      : wrenches.classifier)
     wrench.target.hosts = [:]
     wrench.target.hosts.dir = new File(wrench.target.dir as File, 'hosts')
     wrench.target.hosts[wrench.target.environment.name as String] = [:]
@@ -391,23 +446,22 @@ class PlanStaging {
     Map env = wrench.target.hosts[envName] as Map
     env.dir = new File(wrench.target.hosts.dir as File, envName)
     // build/SNAPSHOT-brambolt/hosts/dev/brambolt:
-    env[wrenches.classifier] = [:]
-    (env[wrenches.classifier as String] as Map).dir =
-      new File(env.dir as File, wrenches.classifier as String)
+    String hostName = wrench.target.host.name as String
+    env[hostName] = [dir: new File(env.dir as File, hostName)]
     // build/SNAPSHOT-brambolt/hosts/***dev/brambolt-client:
-    env["${wrenches.classifier}-client"] = [:]
-    (env["${wrenches.classifier}-client"] as Map).dir =
-      new File(env.dir as File, "${wrenches.classifier}-client")
+    env["${hostName}-client"] = [:]
+    (env["${hostName}-client"] as Map).dir =
+      new File(env.dir as File, "${hostName}-client")
     wrench.target.workspace = [:]
     wrench.target.workspace.dir = new File(wrench.target.dir as File, 'workspace')
     wrench.script = (Wrenches.find(project)
       .withTarget(Target.create(project))
       .withContext(context: 'build')
       .bind([
-        hostName: wrenches.classifier,
-        environmentName: wrench.target.environment.name as String
+        hostName: hostName,
+        environmentName: envName as String
       ]))
-    wrench.gradlew = new File(wrench.target.staging.dir as File, 'gradlew')
+    wrench.gradlew = new File(wrench.target.staging.dir as File, isWindows() ? 'gradlew.bat' : 'gradlew')
   }
 
   void applyWrench(Project project) {
@@ -446,6 +500,11 @@ class PlanStaging {
       configureDelegation(project,
         formatDelegateTaskName('runRunbook', runbook.name), runbook.name, 'runbook')
     }
+    if (1 == target.runbooks.size())
+      // One runbook - delegate with 'runRunbook' as a special case:
+      target.runbooks.each { Runbook runbook ->
+        configureDelegation(project, 'runRunbook', runbook.name, 'runbook')
+      }
     target.checkpoints.each { Checkpoint checkpoint ->
       configureDelegation(project,
         formatDelegateTaskName('runCheckpoint', checkpoint.name), checkpoint.name, 'checkpoint')
@@ -464,8 +523,19 @@ class PlanStaging {
     project.task([type: DefaultTask, dependsOn: 'deploy'], taskName) {
       String qualified = qualifier.isEmpty() ? nodeName : qualifier + Strings.toCamelCase(nodeName, [';'])
       List<String> args = [project.wrench.gradlew, qualified, '--info', '--stacktrace']
+      if (project.gradle.startParameter.isRefreshDependencies())
+        args.add('--refresh-dependencies')
+      if (project.gradle.startParameter.getDependencyVerificationMode())
       // Include known wrench properties for delegation:
-      ['wrenchEnvironmentName', 'wrenchHostName'].each {
+      [
+        'wrenchApplicationPath',
+        'wrenchEnvironmentName',
+        'wrenchHostName',
+        'wrenchInstancePath',
+        'wrenchPropertiesArtifactId',
+        'wrenchPropertiesGroup',
+        'wrenchSystemId'
+      ].each {
         if (project.hasProperty(it))
           args.add("-P${it}=${project.getProperties().get(it)}")
       }
@@ -486,7 +556,8 @@ class PlanStaging {
   void configurePublishing(Project project) {
     project.configure(project) { Project p ->
       p.apply(plugin: 'maven-publish')
-      p.apply(plugin: 'com.jfrog.artifactory')
+      if (project.hasProperty('artifactoryContextUrl'))
+        p.apply(plugin: 'com.jfrog.artifactory')
 
       Object pomMetaData = {
         licenses {
@@ -534,35 +605,36 @@ class PlanStaging {
           }
         }
       }
-
-      p.artifactory {
-        contextUrl = project.artifactoryContextUrl
-        publish {
-          repository {
-            repoKey = project.artifactoryRepoKey
-            username = project.artifactoryUser
-            password = project.artifactoryToken
-            maven = true
+      if (project.hasProperty('artifactoryContextUrl'))
+        p.artifactory {
+          contextUrl = project.artifactoryContextUrl
+          publish {
+            repository {
+              repoKey = project.artifactoryRepoKey
+              username = project.artifactoryUser
+              password = project.artifactoryToken
+              maven = true
+            }
+           defaults {
+             publications('mavenCustom')
+             publishArtifacts = true
+             publishPom = true
+            }
           }
-         defaults {
-           publications('mavenCustom')
-           publishArtifacts = true
-           publishPom = true
+          resolve {
+            repository {
+              repoKey = project.artifactoryRepoKey
+              username = project.artifactoryUser
+              password = project.artifactoryToken
+              maven = true
+            }
           }
         }
-        resolve {
-          repository {
-            repoKey = project.artifactoryRepoKey
-            username = project.artifactoryUser
-            password = project.artifactoryToken
-            maven = true
-          }
-        }
-      }
       Task all = p.tasks.findByName('all')
       if (null == all)
-        all = p.task(type: DefaultTask, 'all')
-      all.dependsOn(p.artifactoryPublish)
+        all = p.task(type: DefaultTask, dependsOn: 'local', 'all')
+      if (project.hasProperty('artifactoryContextUrl'))
+        all.dependsOn(p.artifactoryPublish)
     }
   }
 }

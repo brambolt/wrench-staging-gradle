@@ -38,3 +38,4 @@ pluginManagement {
 
 rootProject.name = 'brambolt-wrench-staging-gradle'
 
+include 'samples'

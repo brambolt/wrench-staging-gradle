@@ -1,0 +1,96 @@
+
+buildscript {
+  repositories {
+    mavenLocal()
+    gradlePluginPortal()
+    maven { url 'https://dl.bintray.com/brambolt/public' }
+    maven {
+      url "${mavenContextUrl}/${mavenRepoKey}"
+      credentials {
+        username(mavenUser as String)
+        password(mavenToken as String)
+      }
+    }
+    jcenter()
+    mavenCentral()
+  }
+  dependencies {
+    classpath "com.brambolt.wrench:brambolt-wrench-properties-sample:${bramboltVersion}"
+    classpath "com.jfrog.artifactory:com.jfrog.artifactory.gradle.plugin:${artifactoryVersion}"
+  }
+}
+
+plugins {
+  id 'com.brambolt.wrench.staging' apply false
+}
+
+apply plugin: 'groovy'
+apply plugin: 'jacoco'
+apply plugin: 'maven-publish'
+
+repositories {
+  mavenLocal()
+  mavenCentral()
+  jcenter()
+  if (project.hasProperty('mavenContextUrl'))
+    maven {
+      url "${mavenContextUrl}/brambolt"
+      credentials {
+        username mavenUser
+        password mavenToken
+      }
+    }
+}
+
+ext {
+  artifactId = 'brambolt-wrench-staging-sample'
+}
+
+allprojects {
+  group = 'com.brambolt.wrench'
+  version = bramboltVersion
+}
+
+apply plugin: 'com.brambolt.wrench.staging'
+
+jar {
+  baseName project.artifactId
+}
+
+publishToMavenLocal.dependsOn(stage)
+publishToMavenLocal.dependsOn(jar)
+
+apply plugin: 'com.jfrog.artifactory'
+
+artifactory {
+  contextUrl = mavenContextUrl
+  publish {
+    repository {
+      repoKey = 'brambolt'
+      username = mavenUser
+      password = mavenToken
+      maven = true
+    }
+    defaults {
+      publications('mavenCustom')
+    }
+  }
+  resolve {
+    repository {
+      repoKey = 'brambolt'
+      username = mavenUser
+      password = mavenToken
+      maven = true
+    }
+  }
+}
+
+if (null == tasks.findByName('local'))
+  task local {}
+local.dependsOn(['test', 'publishToMavenLocal'])
+
+if (null == tasks.findByName('all'))
+  task all {}
+all.dependsOn(local)
+
+defaultTasks 'clean', 'all'

@@ -20,4 +20,4 @@ pluginManagement {
   }
 }
 
-rootProject.name = 'simple'
+rootProject.name = 'simple-dynamic'

@@ -1,0 +1,48 @@
+
+import org.gradle.api.DefaultTask
+
+system {
+  [id: 'some.example.system']
+}
+
+host hostName
+
+environment environmentName
+
+def checkpointSpecs = [
+   [name: 'c1', steps: [
+     [name: 's1'],
+     [name: 's2']
+   ]],
+   [name: 'c2', steps: [
+     [name: 's3']
+   ]]
+]
+
+checkpointSpecs.each { Map c ->
+  def checkpointClosure = {
+    steps {
+      def dispatch = delegate
+      c.steps.each { Map s ->
+        def stepClosure = {
+          doFirst {
+            project.logger.quiet("Step ${s.name}...")
+          }
+        }
+        def parameterMap = [type: DefaultTask]
+        Object[] args = [ parameterMap, stepClosure ]
+        dispatch.invokeMethod(s.name as String, args)
+      }
+    }
+  }
+  project.target.checkpoint(project.target.methodMissing(c.name, checkpointClosure))
+}
+
+runbook r {
+  checkpoints {
+    def dispatch = delegate
+    checkpointSpecs.each {
+      dispatch.getProperty(it.name)
+    }
+  }
+}

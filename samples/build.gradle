@@ -8,6 +8,17 @@ task runSimple(type: Exec) {
     "-Pversion=${version}"])
 }
 
+
+task runSimpleDynamic(type: Exec) {
+  workingDir = new File(project.projectDir, 'simple-dynamic')
+  commandLine([
+    '../../gradlew', 'all',
+    '--no-daemon', '--stacktrace',
+    "-PbramboltVersion=${bramboltVersion}",
+    "-Pversion=${version}"])
+}
+
 task runAll {
   dependsOn(runSimple)
+  dependsOn(runSimpleDynamic)
 }

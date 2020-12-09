@@ -1,5 +1,6 @@
 
 import org.gradle.api.DefaultTask
+import org.gradle.api.Task
 
 system {
   [id: 'some.example.system']
@@ -20,22 +21,23 @@ def checkpointSpecs = [
 ]
 
 checkpointSpecs.each { Map c ->
-  def checkpointClosure = {
+  delegate = project.target
+  checkpoint(invokeMethod(c.name, {
     steps {
       def dispatch = delegate
-      c.steps.each { Map s ->
-        def stepClosure = {
-          doFirst {
-            project.logger.quiet("Step ${s.name}...")
-          }
-        }
-        def parameterMap = [type: DefaultTask]
-        Object[] args = [ parameterMap, stepClosure ]
-        dispatch.invokeMethod(s.name as String, args)
+      c.steps.each { Map spec ->
+        delegate = dispatch
+        invokeMethod(
+          spec.name as String, (Object[]) [
+          [type: DefaultTask],
+          { Task t ->
+            doFirst {
+              project.logger.quiet("Step ${spec.name}...")
+            }
+          }])
       }
     }
-  }
-  project.target.checkpoint(project.target.methodMissing(c.name, checkpointClosure))
+  }))
 }
 
 runbook r {
